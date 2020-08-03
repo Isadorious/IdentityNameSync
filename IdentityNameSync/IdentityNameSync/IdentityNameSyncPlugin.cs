@@ -58,7 +58,9 @@ namespace IdentityNameSync {
             {
                 try {
                     long identityID = MySession.Static.Players.TryGetIdentityId(obj.SteamId);
-                    MySession.Static.Players.TryGetIdentity(identityID).SetDisplayName(obj.Name);
+                    if (!MySession.Static.Players.TryGetIdentity(identityID).DisplayName.Equals(obj.Name)) {
+                        MySession.Static.Players.TryGetIdentity(identityID).SetDisplayName(obj.Name);
+                    }
                 }
                 catch (Exception ex) {
                     Log.Warn($"Identity for player {obj.Name} does not exist. They are likely a new player");
