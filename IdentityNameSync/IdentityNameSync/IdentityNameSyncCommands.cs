@@ -18,18 +18,34 @@ namespace IdentityNameSync
         public static readonly Logger Log = LogManager.GetCurrentClassLogger();
         public IdentityNameSyncPlugin Plugin => (IdentityNameSyncPlugin)Context.Plugin;
 
-        [Command("identityID", "Get the identity ID for a player with the given name")]
-        [Permission(MyPromoteLevel.Admin)]
-        public void GetIdentityByName(string name) {
-                MyPlayer player = MySession.Static?.Players?.GetPlayerByName(name);
-                Context.Respond($"Identity ID for player {name} is: {player.Identity.IdentityId}");
+        // From https://github.com/TorchAPI/Essentials
+        public static IMyIdentity GetIdentityByNameOrIds(string playerNameOrIds)
+        {
+            foreach (var identity in MySession.Static.Players.GetAllIdentities())
+            {
+                if (identity.DisplayName == playerNameOrIds)
+                    return identity;
+
+                if (long.TryParse(playerNameOrIds, out long identityId))
+                    if (identity.IdentityId == identityId)
+                        return identity;
+
+                if (ulong.TryParse(playerNameOrIds, out ulong steamId))
+                {
+                    ulong id = MySession.Static.Players.TryGetSteamId(identity.IdentityId);
+                    if (id == steamId)
+                        return identity;
+                }
+            }
+
+            return null;
         }
 
-        [Command("identityID steam", "Get the identity associated with the given Steam64 ID")]
+        [Command("identityID", "Get the identity ID for a player with the given name or steam ID")]
         [Permission(MyPromoteLevel.Admin)]
-        public void GetIdentityBySteam64(ulong steam64ID) {
-            MyPlayer player = MySession.Static?.Players?.TryGetPlayerBySteamId(steam64ID);
-            Context.Respond($"Identity ID for player {player.Identity.DisplayName} ({steam64ID}) is: {player.Identity.IdentityId}");
+        public void GetIdentityByNameOrIDs(string nameOrSteamID) {
+                IMyIdentity ident = GetIdentityByNameOrIds(nameOrSteamID);
+                Context.Respond($"Identity ID for player {ident.DisplayName} is: {ident.IdentityId}");
         }
 
         [Command("factionID", "Get the ID for a faction with the given tag")]
@@ -38,14 +54,5 @@ namespace IdentityNameSync
             var faction = MySession.Static?.Factions?.TryGetFactionByTag(tag);
             Context.Respond($"ID for faction {tag} is: {faction.FactionId}");
         }
-        
-        [Command("steamID", "Get the Steam64ID for a given player name")]
-        [Permission(MyPromoteLevel.Moderator)]
-        public void GetSteam64ID(string name) {
-            MyPlayer player = MySession.Static?.Players?.GetPlayerByName(name);
-            ulong? steamID = MySession.Static?.Players?.TryGetSteamId(player.Identity.IdentityId);
-            Context.Respond($"Steam64ID for player {name} is: {steamID}");
-        }
-
     }
 }
