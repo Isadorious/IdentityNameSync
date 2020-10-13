@@ -41,11 +41,37 @@ namespace IdentityNameSync
             return null;
         }
 
+        // From https://github.com/TorchAPI/Essentials
+        public static IMyPlayer GetPlayerByNameOrId(string nameOrPlayerId)
+        {
+            if (!long.TryParse(nameOrPlayerId, out long id))
+            {
+                foreach (var identity in MySession.Static.Players.GetAllIdentities())
+                {
+                    if (identity.DisplayName == nameOrPlayerId)
+                    {
+                        id = identity.IdentityId;
+                    }
+                }
+            }
+
+            if (MySession.Static.Players.TryGetPlayerId(id, out MyPlayer.PlayerId playerId))
+            {
+                if (MySession.Static.Players.TryGetPlayerById(playerId, out MyPlayer player))
+                {
+                    return player;
+                }
+            }
+
+            return null;
+        }
+
         [Command("identityID", "Get the identity ID for a player with the given name or steam ID")]
         [Permission(MyPromoteLevel.Admin)]
         public void GetIdentityByNameOrIDs(string nameOrSteamID) {
-                IMyIdentity ident = GetIdentityByNameOrIds(nameOrSteamID);
-                Context.Respond($"Identity ID for player {ident.DisplayName} is: {ident.IdentityId}");
+            IMyIdentity identity = GetIdentityByNameOrIds(nameOrSteamID);
+            if(identity != null) Context.Respond($"Identity ID for player {identity.DisplayName} is: {identity.IdentityId}");
+            else Context.Respond("Unable to find identity for that player");
         }
 
         [Command("factionID", "Get the ID for a faction with the given tag")]
@@ -53,6 +79,15 @@ namespace IdentityNameSync
         public void GetFactionID(string tag){
             var faction = MySession.Static?.Factions?.TryGetFactionByTag(tag);
             Context.Respond($"ID for faction {tag} is: {faction.FactionId}");
+        }
+
+        [Command("steamID", "Get the Steam64ID for a given player name")]
+        [Permission(MyPromoteLevel.Moderator)]
+        public void GetSteam64ID(string name)
+        {
+            IMyPlayer player = GetPlayerByNameOrId(name);
+            if(player != null) Context.Respond($"Steam64ID for player {name} is: {player.SteamUserId}");
+            else Context.Respond("Unable to find player with that name");
         }
     }
 }
